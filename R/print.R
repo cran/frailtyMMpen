@@ -11,10 +11,10 @@ print.fmm_summary <- function(x, ...) {
  
   cat("\n")
   
-  coef_summary = data.frame(coef = x$coef,
-                            "exp(coef)" = exp(x$coef),
-                            "se(coef)" = x$coef_sd,
-                            z = x$zcoef,
+  coef_summary = data.frame(coef = round(x$coef, 3),
+                            "exp(coef)" = round(exp(x$coef), 3),
+                            "se(coef)" = round(x$coef_sd, 3),
+                            z = round(x$zcoef, 3),
                             p = x$pval_coef)
   row.names(coef_summary) = x$coefname
   colnames(coef_summary) = c("coef", "exp(coef)", "se(coef)", "z", "p")

@@ -26,7 +26,7 @@ function \code{predict.fmm} and the following example.
 \examples{
 
 \donttest{
-gam_re = frailtyMM(Surv(tstart, tstop, status) ~  sex + treat + cluster(id), cgd, frailty = "Gamma")
+gam_re = frailtyMM(Surv(tstart, tstop, status) ~  sex + treat + cluster(id), cgd, frailty = "gamma")
 
 # Plot the survival curve based on baseline hazard
 plot(gam_re, surv = TRUE)

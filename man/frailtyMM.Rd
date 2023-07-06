@@ -7,7 +7,7 @@
 frailtyMM(
   formula,
   data,
-  frailty = "LogN",
+  frailty = "gamma",
   power = NULL,
   tol = 1e-05,
   maxit = 200,
@@ -22,8 +22,8 @@ and the right hand side contains the variables and additional specifications.
 
 \item{data}{The \code{data.frame} where the formula argument can be evaluated.}
 
-\item{frailty}{The frailty used for model fitting. The default is "LogN", other choices are
-"InvGauss", "Gamma" and "PVF". (Note that the computation time for PVF family will be slow 
+\item{frailty}{The frailty used for model fitting. The default is "lognormal", other choices are
+"invgauss", "gamma" and "pvf". (Note that the computation time for PVF family will be slow 
 due to the non-explicit expression of likelihood function)}
 
 \item{power}{The power used if PVF frailty is applied.}
@@ -60,9 +60,73 @@ hazard rate of \eqn{j^{th}} object in \eqn{i^{th}} cluster is
 \deqn{\lambda_{ij}(t|\omega_i) = \lambda_0(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
 The multi-event frailty model with different baseline hazard of different event and the hazard rate of \eqn{j^{th}} event for individual \eqn{i^{th}} is 
 \deqn{\lambda_{ij}(t|\omega_i) = \lambda_{0j}(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
-}
 The recurrent event model where the \eqn{j^{th}} event of individual \eqn{i} has observed feature \eqn{\mathbf{X_{ij}}},
 \deqn{\lambda_{ij}(t|\omega_i) = \lambda_0(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
+
+For the  clustered type of data, we further assume that cluster \eqn{i} has \eqn{n_i} with \eqn{j=1,...,n_{i}} number 
+of objects where they share the common frailty parameter \eqn{\omega_i}. For simplicity, we let \eqn{\boldsymbol{\alpha}} 
+be the collection of all parameters and baseline hazard function. Then, the marginal likelihood is as follows,
+
+\if{html}{\figure{fig1.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig1.png}{options: width=5in}}\out{\end{center}}}
+
+Given the objective functions above, we take the clustered data as an example to illustrate the application of MM algorithm in optimizing the observed likelihood function,
+the observed log-likelihood function is, 
+
+\if{html}{\figure{fig4.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig4.png}{options: width=5in}}\out{\end{center}}}
+
+where,
+
+\if{html}{\figure{fig5.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig5.png}{options: width=5in}}\out{\end{center}}}
+
+In order to formulate the iterative algorithm to optimize the observed log likelihood, we further define density function \eqn{g_i(\cdot)} 
+based on the estimates of the parameters in \eqn{k^{th}} iteration \eqn{\boldsymbol{\alpha}^{(k)}}
+
+\if{html}{\figure{fig6.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig6.png}{options: width=5in}}\out{\end{center}}}
+
+Then, we construct the surrogate function to minimize the mariginal log-likelihood using the Jensen's inequality,
+
+\if{html}{\figure{fig7.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig7.png}{options: width=5in}}\out{\end{center}}}
+
+which successfully separated \eqn{\boldsymbol{\alpha}} into \eqn{\boldsymbol{\theta}} and \eqn{(\boldsymbol{\beta}, \Lambda_{0})} where,
+
+\if{html}{\figure{fig8.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig8.png}{options: width=5in}}\out{\end{center}}}
+
+and let \if{latex}{\figure{fig91.png}{options: width=2in}}\if{html}{\figure{fig91.png}{options: width=200}}, 
+
+\if{html}{\figure{fig9.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig9.png}{options: width=5in}}\out{\end{center}}}
+
+And then we estimate \eqn{\Lambda_{0}} by,
+
+\if{html}{\figure{fig10.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig10.png}{options: width=5in}}\out{\end{center}}}
+
+Then, we have, 
+
+\if{html}{\figure{fig11.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig11.png}{options: width=5in}}\out{\end{center}}}
+
+Further more, we apply hyperplane inequality to construct surrogate function for \eqn{\boldsymbol{\beta}} where we can update the its estimates coordinate wise,
+
+\if{html}{\figure{fig12.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig12.png}{options: width=5in}}\out{\end{center}}}
+
+By applying Jensen's inequality, 
+
+\if{html}{\figure{fig13.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig13.png}{options: width=5in}}\out{\end{center}}}
+
+Finally, 
+
+\if{html}{\figure{fig14.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\out{\begin{center}}{\figure{fig14.png}{options: width=5in}}\out{\end{center}}}
+}
 }
 \details{
 To run the shared frailty model, \code{Surv(tstop, status)} formula should be applied along with \code{+cluster()} to specify the
@@ -83,13 +147,13 @@ the parameter \code{power} is only used when \code{frailty}=PVF and since the li
 
 \donttest{
 InvG_real_cl = frailtyMM(Surv(time, status) ~ age + sex + cluster(id),
-                         kidney, frailty = "InvGauss")
+                         kidney, frailty = "invgauss")
 InvG_real_cl
 
 # Cgd data fitted by Recurrent Log-Normal Frailty Model
 
 logN_real_re = frailtyMM(Surv(tstart, tstop, status) ~ sex + treat + cluster(id),
-                         cgd, frailty = "Gamma")
+                         cgd, frailty = "gamma")
 logN_real_re
 }
 
@@ -101,45 +165,45 @@ data(simdataCL)
 
 # Clustered Gamma Frailty Model
 gam_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-                   simdataCL, frailty = "Gamma")
+                   simdataCL, frailty = "gamma")
 
 \donttest{
 # Clustered Log-Normal Frailty Model
 logn_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-                    simdataCL, frailty = "LogN")
+                    simdataCL, frailty = "lognormal")
 
 # Clustered Inverse Gaussian Frailty Model
 invg_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-                    simdataCL, frailty = "InvGauss")
+                    simdataCL, frailty = "invgauss")
                    
 data(simdataME)
 
 # Multi-event Gamma Frailty Model
 gam_me = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-                   simdataCL, frailty = "Gamma")
+                   simdataCL, frailty = "gamma")
 
 
 # Multi-event Log-Normal Frailty Model
 logn_me = frailtyMM(Surv(time, status) ~ . + event(id), 
-                    simdataME, frailty = "LogN")
+                    simdataME, frailty = "lognormal")
 
 # Multi-event Inverse Gaussian Frailty Model
 invg_me = frailtyMM(Surv(time, status) ~ . + event(id),
-                    simdataME, frailty = "InvGauss")
+                    simdataME, frailty = "invgauss")
 
 data(simdataRE)
 
 # Recurrent event Gamma Frailty Model
 gam_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id),
-                   simdataRE, frailty = "Gamma")
+                   simdataRE, frailty = "gamma")
 
 # Recurrent event Log-Normal Frailty Model
 logn_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id),
-                   simdataRE, frailty = "LogN")
+                   simdataRE, frailty = "lognormal")
 
 # Recurrent event Inverse Gaussian Frailty Model
 invg_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id), 
-                    simdataRE, frailty = "InvGauss")
+                    simdataRE, frailty = "invgauss")
 }
 
 # Obtain the summary statistics under fitted model

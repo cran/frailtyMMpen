@@ -7,7 +7,7 @@
 frailtyMMpen(
   formula,
   data,
-  frailty = "LogN",
+  frailty = "gamma",
   power = NULL,
   penalty = "LASSO",
   gam = NULL,
@@ -25,8 +25,8 @@ and the right hand side contains the variables and additional specifications.
 
 \item{data}{The \code{data.frame} where the formula argument can be evaluated.}
 
-\item{frailty}{The frailty used for model fitting. The default is "LogN", other choices are
-"InvGauss", "Gamma" and "PVF". (Note that the computation time for PVF family will be slow 
+\item{frailty}{The frailty used for model fitting. The default is "lognormal", other choices are
+"invgauss", "gamma" and "pvf". (Note that the computation time for PVF family will be slow 
 due to the non-explicit expression of likelihood function)}
 
 \item{power}{The power used if PVF frailty is applied.}
@@ -48,11 +48,11 @@ The default value of \eqn{\gamma} for MCP is 3 and SCAD is 3.7.}
 }
 \value{
 An object of class \code{fmm} that contains the following fields:
-\item{coef}{matrix of coefficient estimated from a specific model.}
-\item{est.tht}{vector of frailty parameter estimated from a specific model.}
-\item{lambda}{list of frailty for each observation estimated from a specific model.}
-\item{likelihood}{vector of the observed log-likelihood given estimated parameters.}
-\item{BIC}{vector of the BIC given estimated parameters.}
+\item{coef}{matrix of coefficient estimated from a specific model where each column correponds to an input tuning parameter.}
+\item{est.tht}{vector of frailty parameters estimated from a specific model with respect to each tuning parameter.}
+\item{lambda}{list of frailty for each observation estimated from a specific model with respect to each tuning parameter.}
+\item{likelihood}{vector of the observed log-likelihood given estimated parameters with respect to each tuning parameter.}
+\item{BIC}{vector of the BIC given estimated parameters with respect to each tuning parameter.}
 \item{tune}{vector of tuning parameters used for penalized regression.}
 \item{tune.min}{tuning parameter where minimal of BIC is obtained.}
 \item{convergence}{convergence threshold.}
@@ -72,10 +72,26 @@ id may not be identical to the original id. Also, the order of id is correspondi
 {This formula is used to fit the penalized regression. 3 types of the models can be fitted similar to the function
 \code{frailtyMM}. In addition, variable selection can be done by three types of penalty, LASSO, MCP and SCAD with the following
 objective function where \eqn{\lambda} is the tuning parameter and \eqn{q} is the dimension of \eqn{\boldsymbol{\beta}},
- \deqn{l(\boldsymbol{\beta},\Lambda_0|Y_{obs}) + n\sum_{p=1}^{q} p(|\beta_p|, \lambda).}
+ \deqn{l(\boldsymbol{\beta},\Lambda_0|Y_{obs}) - n\sum_{p=1}^{q} p(|\beta_p|, \lambda).}
  The BIC is computed using the following equation,
  \deqn{-2l(\hat{\boldsymbol{\beta}}, \hat{\Lambda}_0) + G_n(\hat{S}+1)\log(n),}
- where \eqn{G_n=\max{1, \log(\log(q+1))}} and \eqn{\hat{S}} is the degree of freedom.
+ where \eqn{G_n=\max\{1, \log(\log(q+1))\}} and \eqn{\hat{S}} is the degree of freedom.
+ 
+ Surrogate function is also derived for penalty part for efficient estimation of penalized regression, similar to the notation used
+ in \code{\link{frailtyMM}}, we let \eqn{\boldsymbol{\alpha}} be the collection of all parameters and baseline hazard function. Given that,
+ 
+ \if{html}{\figure{fig15.png}{options: style="width:750px;max-width:75\%;"}}
+ \if{latex}{\out{\begin{center}}{\figure{fig15.png}{options: width=5in}}\out{\end{center}}}
+ 
+ by local quadratic approximation,
+ 
+ \if{html}{\figure{fig16.png}{options: style="width:750px;max-width:75\%;"}}
+ \if{latex}{\out{\begin{center}}{\figure{fig16.png}{options: width=5in}}\out{\end{center}}}
+ 
+ And thus, the surrogate function given \eqn{k^{th}} iteration result is as follows,
+ 
+ \if{html}{\figure{fig17.png}{options: style="width:750px;max-width:75\%;"}}
+ \if{latex}{\out{\begin{center}}{\figure{fig17.png}{options: width=5in}}\out{\end{center}}}
 }
 }
 \details{
@@ -92,12 +108,12 @@ data(simdataCL)
 
 # Using default tuning parameter sequence
 gam_cl1 = frailtyMMpen(Surv(time, status) ~ . + cluster(id),
-                       simdataCL, frailty = "Gamma")
+                       simdataCL, frailty = "gamma")
 
 \donttest{
 # Using given tuning parameter sequence
 gam_cl2 = frailtyMMpen(Surv(time, status) ~ . + cluster(id), 
-                       simdataCL, frailty = "Gamma", tune = 0.1)
+                       simdataCL, frailty = "gamma", tune = 0.1)
 
 # Obtain the coefficient where minimum BIC is obtained
 coef(gam_cl1)

@@ -14,7 +14,7 @@ plot.fpen <- function(x, ...) {
 
   n = ncol(yaxis)
   matplot(xaxis, yaxis, lty = 1, xlab = "log(tune)", ylab = "coefficients", type = "l")
-  abline(v = log(x$tune.min), col="red", lwd=3, lty=2)
+  abline(v = log(x$tune.min), col = "red", lwd = 3, lty = 2)
 }
 
 #' Plot the baseline hazard or the predicted hazard based on the new data
@@ -38,7 +38,7 @@ plot.fpen <- function(x, ...) {
 #' @examples 
 #' 
 #' \donttest{
-#' gam_re = frailtyMM(Surv(tstart, tstop, status) ~  sex + treat + cluster(id), cgd, frailty = "Gamma")
+#' gam_re = frailtyMM(Surv(tstart, tstop, status) ~  sex + treat + cluster(id), cgd, frailty = "gamma")
 #' 
 #' # Plot the survival curve based on baseline hazard
 #' plot(gam_re, surv = TRUE)
@@ -52,11 +52,20 @@ plot.fmm <- function(x, newdata = NULL, surv = FALSE, ...) {
   
   df = predict(object = x, newdata = newdata, surv = surv)
   
-  if (surv == TRUE) {
-    yax = "Survival curve"
+  if (is.null(newdata)) {
+    if (surv == TRUE) {
+      yax = "Baseline Survival curve"
+    } else {
+      yax = "Baseline Cumulative hazard"
+    }
   } else {
-    yax = "Cumulative hazard"
+    if (surv == TRUE) {
+      yax = "Survival curve"
+    } else {
+      yax = "Cumulative hazard"
+    }
   }
+  
   plot(df$time, df$estimate, type = "l", col = "red",
        xlab = "time", ylab = yax, ylim = c(0, max(df$estimateub) + 0.1), lwd = 2)
   lines(df$time, df$estimateub, col = "red", lty = 3, lwd = 1.5)

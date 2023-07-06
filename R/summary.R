@@ -15,7 +15,7 @@
 summary.fmm <- function(object, ...) {
   
   model = object
-  frailtyc = switch(model$frailty, "Gamma" = 0, "LogN" = 1, "InvGauss" = 2, "PVF" = 3)
+  frailtyc = switch(model$frailty, "Gamma" = 0, "Log-Normal" = 1, "Inverse Gaussian" = 2, "PVF" = 3)
   datatype = switch(model$datatype, "Cluster" = 1, "Multi-event" = 2, "Recurrent" = 3)
   p = length(model$coef)
   

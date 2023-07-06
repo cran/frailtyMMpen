@@ -6,17 +6,81 @@
 #' \deqn{\lambda_{ij}(t|\omega_i) = \lambda_0(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
 #' The multi-event frailty model with different baseline hazard of different event and the hazard rate of \eqn{j^{th}} event for individual \eqn{i^{th}} is 
 #' \deqn{\lambda_{ij}(t|\omega_i) = \lambda_{0j}(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
-#' }
 #' The recurrent event model where the \eqn{j^{th}} event of individual \eqn{i} has observed feature \eqn{\mathbf{X_{ij}}},
 #' \deqn{\lambda_{ij}(t|\omega_i) = \lambda_0(t) \omega_i \exp(\boldsymbol{\beta}' \mathbf{X_{ij}}).}
+#' 
+#' For the  clustered type of data, we further assume that cluster \eqn{i} has \eqn{n_i} with \eqn{j=1,...,n_{i}} number 
+#' of objects where they share the common frailty parameter \eqn{\omega_i}. For simplicity, we let \eqn{\boldsymbol{\alpha}} 
+#' be the collection of all parameters and baseline hazard function. Then, the marginal likelihood is as follows,
+#' 
+#' \if{html}{\figure{fig1.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig1.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' Given the objective functions above, we take the clustered data as an example to illustrate the application of MM algorithm in optimizing the observed likelihood function,
+#' the observed log-likelihood function is, 
+#' 
+#' \if{html}{\figure{fig4.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig4.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' where,
+#' 
+#' \if{html}{\figure{fig5.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig5.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' In order to formulate the iterative algorithm to optimize the observed log likelihood, we further define density function \eqn{g_i(\cdot)} 
+#' based on the estimates of the parameters in \eqn{k^{th}} iteration \eqn{\boldsymbol{\alpha}^{(k)}}
+#' 
+#' \if{html}{\figure{fig6.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig6.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' Then, we construct the surrogate function to minimize the mariginal log-likelihood using the Jensen's inequality,
+#' 
+#' \if{html}{\figure{fig7.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig7.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' which successfully separated \eqn{\boldsymbol{\alpha}} into \eqn{\boldsymbol{\theta}} and \eqn{(\boldsymbol{\beta}, \Lambda_{0})} where,
+#' 
+#' \if{html}{\figure{fig8.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig8.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' and let \if{latex}{\figure{fig91.png}{options: width=2in}}\if{html}{\figure{fig91.png}{options: width=200}}, 
+#' 
+#' \if{html}{\figure{fig9.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig9.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' And then we estimate \eqn{\Lambda_{0}} by,
+#' 
+#' \if{html}{\figure{fig10.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig10.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' Then, we have, 
+#' 
+#' \if{html}{\figure{fig11.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig11.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' Further more, we apply hyperplane inequality to construct surrogate function for \eqn{\boldsymbol{\beta}} where we can update the its estimates coordinate wise,
+#' 
+#' \if{html}{\figure{fig12.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig12.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' By applying Jensen's inequality, 
+#' 
+#' \if{html}{\figure{fig13.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig13.png}{options: width=5in}}\out{\end{center}}}
+#' 
+#' Finally, 
+#' 
+#' \if{html}{\figure{fig14.png}{options: style="width:750px;max-width:75\%;"}}
+#' \if{latex}{\out{\begin{center}}{\figure{fig14.png}{options: width=5in}}\out{\end{center}}}
+#' }
 #' 
 #' @param formula Formula where the left hand side is an object of the type \code{Surv}
 #' and the right hand side contains the variables and additional specifications. 
 #' \code{+cluster()} function specify the group id for clustered data or individual id for recurrent data.
 #' \code{+event()} function specify the event id for multi-event data (only two events are allowed).
 #' @param data The \code{data.frame} where the formula argument can be evaluated.
-#' @param frailty The frailty used for model fitting. The default is "LogN", other choices are
-#' "InvGauss", "Gamma" and "PVF". (Note that the computation time for PVF family will be slow 
+#' @param frailty The frailty used for model fitting. The default is "lognormal", other choices are
+#' "invgauss", "gamma" and "pvf". (Note that the computation time for PVF family will be slow 
 #' due to the non-explicit expression of likelihood function)
 #' @param power The power used if PVF frailty is applied.
 #' @param tol The tolerance level for convergence.
@@ -69,13 +133,13 @@
 #' 
 #' \donttest{
 #' InvG_real_cl = frailtyMM(Surv(time, status) ~ age + sex + cluster(id),
-#'                          kidney, frailty = "InvGauss")
+#'                          kidney, frailty = "invgauss")
 #' InvG_real_cl
 #' 
 #' # Cgd data fitted by Recurrent Log-Normal Frailty Model
 #' 
 #' logN_real_re = frailtyMM(Surv(tstart, tstop, status) ~ sex + treat + cluster(id),
-#'                          cgd, frailty = "Gamma")
+#'                          cgd, frailty = "gamma")
 #' logN_real_re
 #' }
 #' 
@@ -87,45 +151,45 @@
 #' 
 #' # Clustered Gamma Frailty Model
 #' gam_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-#'                    simdataCL, frailty = "Gamma")
+#'                    simdataCL, frailty = "gamma")
 #' 
 #' \donttest{
 #' # Clustered Log-Normal Frailty Model
 #' logn_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-#'                     simdataCL, frailty = "LogN")
+#'                     simdataCL, frailty = "lognormal")
 #' 
 #' # Clustered Inverse Gaussian Frailty Model
 #' invg_cl = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-#'                     simdataCL, frailty = "InvGauss")
+#'                     simdataCL, frailty = "invgauss")
 #'                    
 #' data(simdataME)
 #' 
 #' # Multi-event Gamma Frailty Model
 #' gam_me = frailtyMM(Surv(time, status) ~ . + cluster(id), 
-#'                    simdataCL, frailty = "Gamma")
+#'                    simdataCL, frailty = "gamma")
 #' 
 #' 
 #' # Multi-event Log-Normal Frailty Model
 #' logn_me = frailtyMM(Surv(time, status) ~ . + event(id), 
-#'                     simdataME, frailty = "LogN")
+#'                     simdataME, frailty = "lognormal")
 #' 
 #' # Multi-event Inverse Gaussian Frailty Model
 #' invg_me = frailtyMM(Surv(time, status) ~ . + event(id),
-#'                     simdataME, frailty = "InvGauss")
+#'                     simdataME, frailty = "invgauss")
 #' 
 #' data(simdataRE)
 #' 
 #' # Recurrent event Gamma Frailty Model
 #' gam_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id),
-#'                    simdataRE, frailty = "Gamma")
+#'                    simdataRE, frailty = "gamma")
 #' 
 #' # Recurrent event Log-Normal Frailty Model
 #' logn_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id),
-#'                    simdataRE, frailty = "LogN")
+#'                    simdataRE, frailty = "lognormal")
 #' 
 #' # Recurrent event Inverse Gaussian Frailty Model
 #' invg_re = frailtyMM(Surv(start, end, status) ~ . + cluster(id), 
-#'                     simdataRE, frailty = "InvGauss")
+#'                     simdataRE, frailty = "invgauss")
 #' }
 #' 
 #' # Obtain the summary statistics under fitted model
@@ -133,7 +197,7 @@
 #' coef(gam_cl)
 #' summary(gam_cl)
 #' 
-frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5, maxit = 200, ...) {
+frailtyMM <- function(formula, data, frailty = "gamma", power = NULL, tol = 1e-5, maxit = 200, ...) {
   
   Call <- match.call()
   
@@ -148,18 +212,26 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
   m <- model.frame(formula, data)
   mx <- model.matrix(formula, data)
   
+  lower_frailty = tolower(frailty)
+  
+  frailty = switch(lower_frailty, "gamma" = "Gamma", "lognormal" = "LogN", "invgauss" = "InvGauss", "pvf" = "PVF",
+                   stop("Invalid frailty specified, please check the frailty input"))
+  
+  out_frailty = switch(frailty, "Gamma" = "Gamma", "LogN" = "Log-Normal", "InvGauss" = "Inverse Gaussian", "PVF" = "PVF")
+  
   if (ncol(m[[1]]) == 2) {
     
-    cluster_id <- grep("cluster", names(m))
-    event_id <- grep("event", names(m))
+    cluster_id <- grep("^cluster\\(", colnames(mx))
+    event_id <- grep("^event\\(", colnames(mx))
     
     if (length(cluster_id) == 0 && length(event_id) == 0) {
       
       type = "Cluster"
-      mx1 = mx[, -c(1)]
+      mx1 = mx[, -c(1), drop = FALSE]
       coef_name = colnames(mx1)
       
       N = nrow(mx1)
+      p = ncol(mx1)
       newid = seq(0, N-1, 1)
       
       if (N <= 2) {
@@ -171,7 +243,7 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
       d = m[[1]][, 2]
       a = N
       
-      initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1)
+      initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1, SQS1 = 0)
       
       output = frailtyMMcal(y, X, d, N, a, newid,
                             coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
@@ -183,7 +255,7 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
                  likelihood = output$likelihood,
                  Ar = output$Ar,
                  input = output$input,
-                 frailty = frailty,
+                 frailty = out_frailty,
                  power = power,
                  iter = output$iter,
                  convergence = output$convergence,
@@ -198,11 +270,11 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
     if (length(cluster_id) == 1) {
       
       type = "Cluster"
-      pb = unlist(gregexpr('\\(', names(m)[cluster_id])) + 1
-      pe = unlist(gregexpr('\\)', names(m)[cluster_id])) - 1
-      clsname = substr(names(m)[cluster_id], pb, pe)
-      remove_cluster_id <- grep(clsname, names(m))
-      mx1 = mx[, -c(1, remove_cluster_id)]
+      pb = unlist(gregexpr('\\(', colnames(mx)[cluster_id])) + 1
+      pe = unlist(gregexpr('\\)', colnames(mx)[cluster_id])) - 1
+      clsname = substr(colnames(mx)[cluster_id], pb, pe)
+      remove_cluster_id = c(which(colnames(mx) == clsname), cluster_id)
+      mx1 = mx[, -c(1, remove_cluster_id), drop = FALSE]
       mxid = mx[, cluster_id]
       coef_name = colnames(mx1)
       
@@ -223,11 +295,12 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
       }
       
       y = m[[1]][nord, 1]
-      X = mx1[nord, ]
+      X = mx1[nord, , drop = FALSE]
       d = m[[1]][nord, 2]
+      p = ncol(mx1)
       a = max(newid) + 1
       
-      initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1)
+      initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1, SQS1 = 0)
       
       output = frailtyMMcal(y, X, d, N, a, newid,
                             coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
@@ -239,7 +312,7 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
                  likelihood = output$likelihood,
                  Ar = output$Ar,
                  input = output$input,
-                 frailty = frailty,
+                 frailty = out_frailty,
                  power = power,
                  iter = output$iter,
                  convergence = output$convergence,
@@ -255,11 +328,11 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
     if (length(event_id) == 1) {
       
       type = "Multiple"
-      pb = unlist(gregexpr('\\(', names(m)[event_id])) + 1
-      pe = unlist(gregexpr('\\)', names(m)[event_id])) - 1
-      evsname = substr(names(m)[event_id], pb, pe)
-      remove_event_id <- grep(evsname, names(m))
-      mx1 = mx[, -c(1, remove_event_id)]
+      pb = unlist(gregexpr('\\(', colnames(mx)[event_id])) + 1
+      pe = unlist(gregexpr('\\)', colnames(mx)[event_id])) - 1
+      evsname = substr(colnames(mx)[event_id], pb, pe)
+      remove_event_id = c(which(colnames(mx) == evsname), event_id)
+      mx1 = mx[, -c(1, remove_event_id), drop = FALSE]
       mxid = mx[, event_id]
       coef_name = colnames(mx1)
       
@@ -274,11 +347,11 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
       nord = order(mxid)
       N = length(nord)
       mx1 = mx1[nord, ]
-      X = mx1[nord, ]
+      X = mx1[nord, , drop = FALSE]
       y = m[[1]][nord, 1]
       d = m[[1]][nord, 2]
       
-      initGam = frailtyMMcal(y, X, d, N, b, NULL, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 2)
+      initGam = frailtyMMcal(y, X, d, N, b, NULL, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 2, SQS1 = 0)
       
       output = frailtyMMcal(y, X, d, N, b, NULL,
                             coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
@@ -290,7 +363,7 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
                  likelihood = output$likelihood,
                  Ar = output$Ar,
                  input = output$input,
-                 frailty = frailty,
+                 frailty = out_frailty,
                  power = power,
                  iter = output$iter,
                  convergence = output$convergence,
@@ -307,12 +380,12 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
   if (ncol(m[[1]]) == 3) {
     
     type = "Recurrent"
-    cluster_id <- grep("cluster", names(m))
-    pb = unlist(gregexpr('\\(', names(m)[cluster_id])) + 1
-    pe = unlist(gregexpr('\\)', names(m)[cluster_id])) - 1
-    clsname = substr(names(m)[cluster_id], pb, pe)
-    remove_cluster_id <- grep(clsname, names(m))
-    mx1 = mx[, -c(1, remove_cluster_id)]
+    cluster_id <- grep("^cluster\\(", colnames(mx))
+    pb = unlist(gregexpr('\\(', colnames(mx)[cluster_id])) + 1
+    pe = unlist(gregexpr('\\)', colnames(mx)[cluster_id])) - 1
+    clsname = substr(colnames(mx)[cluster_id], pb, pe)
+    remove_cluster_id = c(which(colnames(mx) == clsname), cluster_id)
+    mx1 = mx[, -c(1, remove_cluster_id), drop = FALSE]
     mxid = mx[, cluster_id]
     coef_name = colnames(mx1)
     
@@ -336,11 +409,11 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
     }
     
     y = m[[1]][nord, 2]
-    X = mx1[nord, ]
+    X = mx1[nord, , drop = FALSE]
     d = m[[1]][nord, 3]
     a = max(newid) + 1
     
-    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 3)
+    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 3, SQS1 = 0)
     
     output = frailtyMMcal(y, X, d, N, a, newid,
                           coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
@@ -352,7 +425,7 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
                likelihood = output$likelihood,
                Ar = output$Ar,
                input = output$input,
-               frailty = frailty,
+               frailty = out_frailty,
                power = power,
                iter = output$iter,
                convergence = output$convergence,
@@ -363,6 +436,10 @@ frailtyMM <- function(formula, data, frailty = "LogN", power = NULL, tol = 1e-5,
                a = a,
                datatype = "Recurrent")
     
+  }
+  
+  if (ret$convergence/(tol*p) > 100) {
+    warning("Algorithm may not converge, you may try to increase the maximum number of iterations (maxit)")
   }
   
   attr(ret, "call") <-  Call

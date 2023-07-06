@@ -1,4 +1,4 @@
-frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL, lambda.ini = NULL, frailty = "Gamma", power = NULL, penalty = NULL, gam.val = NULL, tune = NULL, maxit = 200, threshold = 1e-5, type = 0) {
+frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL, lambda.ini = NULL, safe.ini = NULL, frailty = "Gamma", power = NULL, penalty = NULL, gam.val = NULL, tune = NULL, maxit = 200, threshold = 1e-5, type = 0, SQS1 = 1) {
   
   p = dim(X)[2]
   
@@ -46,9 +46,9 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
 
   ## MM iteration
   num = 0
-  SQS1 = 1
   p0 = 0
   threshold = threshold * (p+1)
+  error_count = 0
   
   while(error > threshold && num < maxit) {
     
@@ -65,7 +65,30 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
     lambda = rs1$lambda
     Ar = rs1$Ar
     
+    if (rs1$error) {
+      
+      if (error_count >= 1 && !is.null(safe.ini)) {
+        
+        coef = safe.ini$coef
+        coef1 = coef
+        est.tht = safe.ini$est.tht
+        lambda = safe.ini$lambda
+        
+      } else {
+        
+        coef = coef.ini
+        coef1 = coef
+        est.tht = est.tht.ini
+        lambda = lambda.ini
+        SQS1 = 0
+        num = 0
+      }
+      error_count = error_count + 1
+      
+    }
+    
     if (sum(abs(coef1)) < threshold) {
+      coef = rep(0, p)
       break
     }
 
@@ -78,6 +101,32 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
     coef2 = rs2$coef
     est.tht = rs2$est.tht
     lambda = rs2$lambda
+    
+    al_be = -1
+    
+    if (rs2$error) {
+
+      if (error_count >= 1 && !is.null(safe.ini)) {
+        
+        coef = safe.ini$coef
+        coef2 = coef
+        est.tht = safe.ini$est.tht
+        lambda = safe.ini$lambda
+        
+      } else {
+        
+        coef = coef.ini
+        coef2 = coef
+        est.tht = est.tht.ini
+        lambda = lambda.ini
+        SQS1 = 0
+        num = 0
+        error_count = error_count + 1
+      }
+      error_count = error_count + 1
+      
+      
+    }
 
     if (!SQS1) {
       coef = coef2
@@ -103,20 +152,37 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
         p6 = proc.time()[1]
   
         if (rs$error) {
+          
           coef = coef.ini
           est.tht = est.tht.ini
           lambda = lambda.ini
           SQS1 = 0
           num = 0
+          error_count = error_count + 1
           break
+          
         }
         
-        if (!backtrackerror(model = rs, coef = coef.temp, est.tht = est.tht, lambda = lambda)) {
+        temp = backtrackerror(model = rs, coef = coef.temp, est.tht = est.tht, lambda = lambda)
+        
+        if (temp == 2) {
+          
+          coef = coef.ini
+          est.tht = est.tht.ini
+          lambda = lambda.ini
+          SQS1 = 0
+          num = 0
+          error_count = error_count + 1
+          break
+          
+        }
+        
+        if (!temp) {
           break
         }
       }
       
-      if (!rs$error) {
+      if (!rs$error && temp != 2) {
         coef = rs$coef
         est.tht = rs$est.tht
         lambda = rs$lambda
@@ -126,9 +192,12 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
  
     error = sum(abs(coef - coef0)) + sum(abs(est.tht - est.tht0))
     
+    if (error_count > 2) {
+      break
+    }
+    
     num = num + 1
-    # cat(error, " ", est.tht, " ", " ", al_be, " ", num, '\n')
-    p0 = p0 + (p2 - p1) + (p4 - p3) + (p6 - p5)
+    # cat(error, " ", est.tht, " ", " ", al_be, " ", num, " ", sum(abs(coef)), " ", error_count, '\n')
   }
   
   l1 = logLikcal(y, X, d, coef, lambda, est.tht, frailtyc, id, N, a, p, power, type)
@@ -141,6 +210,7 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
                 input = list(y = y, X = X, d = d),
                 iter = num,
                 convergence = error)
+  
   
   # cat("->", p0)
   return(output)

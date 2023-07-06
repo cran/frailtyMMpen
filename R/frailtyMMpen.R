@@ -3,10 +3,26 @@
 #' @description {This formula is used to fit the penalized regression. 3 types of the models can be fitted similar to the function
 #' \code{frailtyMM}. In addition, variable selection can be done by three types of penalty, LASSO, MCP and SCAD with the following
 #' objective function where \eqn{\lambda} is the tuning parameter and \eqn{q} is the dimension of \eqn{\boldsymbol{\beta}},
-#'  \deqn{l(\boldsymbol{\beta},\Lambda_0|Y_{obs}) + n\sum_{p=1}^{q} p(|\beta_p|, \lambda).}
+#'  \deqn{l(\boldsymbol{\beta},\Lambda_0|Y_{obs}) - n\sum_{p=1}^{q} p(|\beta_p|, \lambda).}
 #'  The BIC is computed using the following equation,
 #'  \deqn{-2l(\hat{\boldsymbol{\beta}}, \hat{\Lambda}_0) + G_n(\hat{S}+1)\log(n),}
-#'  where \eqn{G_n=\max{1, \log(\log(q+1))}} and \eqn{\hat{S}} is the degree of freedom.
+#'  where \eqn{G_n=\max\{1, \log(\log(q+1))\}} and \eqn{\hat{S}} is the degree of freedom.
+#'  
+#'  Surrogate function is also derived for penalty part for efficient estimation of penalized regression, similar to the notation used
+#'  in \code{\link{frailtyMM}}, we let \eqn{\boldsymbol{\alpha}} be the collection of all parameters and baseline hazard function. Given that,
+#'  
+#'  \if{html}{\figure{fig15.png}{options: style="width:750px;max-width:75\%;"}}
+#'  \if{latex}{\out{\begin{center}}{\figure{fig15.png}{options: width=5in}}\out{\end{center}}}
+#'  
+#'  by local quadratic approximation,
+#'  
+#'  \if{html}{\figure{fig16.png}{options: style="width:750px;max-width:75\%;"}}
+#'  \if{latex}{\out{\begin{center}}{\figure{fig16.png}{options: width=5in}}\out{\end{center}}}
+#'  
+#'  And thus, the surrogate function given \eqn{k^{th}} iteration result is as follows,
+#'  
+#'  \if{html}{\figure{fig17.png}{options: style="width:750px;max-width:75\%;"}}
+#'  \if{latex}{\out{\begin{center}}{\figure{fig17.png}{options: width=5in}}\out{\end{center}}}
 #' }
 #' 
 #' @param formula Formula where the left hand side is an object of the type \code{Surv}
@@ -14,8 +30,8 @@
 #' \code{+cluster()} function specify the group id for clustered data or individual id for recurrent data.
 #' \code{+event()} function specify the event id for multi-event data (only two events are allowed).
 #' @param data The \code{data.frame} where the formula argument can be evaluated.
-#' @param frailty The frailty used for model fitting. The default is "LogN", other choices are
-#' "InvGauss", "Gamma" and "PVF". (Note that the computation time for PVF family will be slow 
+#' @param frailty The frailty used for model fitting. The default is "lognormal", other choices are
+#' "invgauss", "gamma" and "pvf". (Note that the computation time for PVF family will be slow 
 #' due to the non-explicit expression of likelihood function)
 #' @param power The power used if PVF frailty is applied.
 #' @param penalty The penalty used for regularization, the default is "LASSO", other choices are "MCP" and "SCAD".
@@ -35,11 +51,11 @@
 #' The formula is same as the input for function \code{frailtyMM}.
 #' 
 #' @return An object of class \code{fmm} that contains the following fields:
-#' \item{coef}{matrix of coefficient estimated from a specific model.}
-#' \item{est.tht}{vector of frailty parameter estimated from a specific model.}
-#' \item{lambda}{list of frailty for each observation estimated from a specific model.}
-#' \item{likelihood}{vector of the observed log-likelihood given estimated parameters.}
-#' \item{BIC}{vector of the BIC given estimated parameters.}
+#' \item{coef}{matrix of coefficient estimated from a specific model where each column correponds to an input tuning parameter.}
+#' \item{est.tht}{vector of frailty parameters estimated from a specific model with respect to each tuning parameter.}
+#' \item{lambda}{list of frailty for each observation estimated from a specific model with respect to each tuning parameter.}
+#' \item{likelihood}{vector of the observed log-likelihood given estimated parameters with respect to each tuning parameter.}
+#' \item{BIC}{vector of the BIC given estimated parameters with respect to each tuning parameter.}
 #' \item{tune}{vector of tuning parameters used for penalized regression.}
 #' \item{tune.min}{tuning parameter where minimal of BIC is obtained.}
 #' \item{convergence}{convergence threshold.}
@@ -73,12 +89,12 @@
 #' 
 #' # Using default tuning parameter sequence
 #' gam_cl1 = frailtyMMpen(Surv(time, status) ~ . + cluster(id),
-#'                        simdataCL, frailty = "Gamma")
+#'                        simdataCL, frailty = "gamma")
 #' 
 #' \donttest{
 #' # Using given tuning parameter sequence
 #' gam_cl2 = frailtyMMpen(Surv(time, status) ~ . + cluster(id), 
-#'                        simdataCL, frailty = "Gamma", tune = 0.1)
+#'                        simdataCL, frailty = "gamma", tune = 0.1)
 #' 
 #' # Obtain the coefficient where minimum BIC is obtained
 #' coef(gam_cl1)
@@ -94,7 +110,7 @@
 #' 
 #' }
 #' 
-frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty = "LASSO", gam = NULL, tune = NULL, tol = 1e-5, maxit = 200, ...) {
+frailtyMMpen <- function(formula, data, frailty = "gamma", power = NULL, penalty = "LASSO", gam = NULL, tune = NULL, tol = 1e-5, maxit = 200, ...) {
   
   Call <- match.call()
   
@@ -109,16 +125,23 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   m <- model.frame(formula, data)
   mx <- model.matrix(formula, data)
   
+  lower_frailty = tolower(frailty)
+  
+  frailty = switch(lower_frailty, "gamma" = "Gamma", "lognormal" = "LogN", "invgauss" = "InvGauss", "pvf" = "PVF",
+                   stop("Invalid frailty specified, please check the frailty input"))
+  
+  out_frailty = switch(frailty, "Gamma" = "Gamma", "LogN" = "Log-Normal", "InvGauss" = "Inverse Gaussian", "PVF" = "PVF")
+  
   if (ncol(m[[1]]) == 2) {
     
-    cluster_id <- grep("cluster", names(m))
-    event_id <- grep("event", names(m))
+    cluster_id <- grep("^cluster\\(", colnames(mx))
+    event_id <- grep("^event\\(", colnames(mx))
     
     
     if (length(cluster_id) == 0 && length(event_id) == 0) {
       
       type = "Cluster"
-      mx1 = mx[, -c(1)]
+      mx1 = mx[, -c(1), drop = FALSE]
       coef_name = colnames(mx1)
       
       N = nrow(mx1)
@@ -139,18 +162,18 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     if (length(cluster_id) == 1) {
       
       type = "Cluster"
-      pb = unlist(gregexpr('\\(', names(m)[cluster_id])) + 1
-      pe = unlist(gregexpr('\\)', names(m)[cluster_id])) - 1
-      clsname = substr(names(m)[cluster_id], pb, pe)
-      remove_cluster_id <- grep(clsname, names(m))
-      mx1 = mx[, -c(1, remove_cluster_id)]
+      pb = unlist(gregexpr('\\(', colnames(mx)[cluster_id])) + 1
+      pe = unlist(gregexpr('\\)', colnames(mx)[cluster_id])) - 1
+      clsname = substr(colnames(mx)[cluster_id], pb, pe)
+      remove_cluster_id = c(which(colnames(mx) == clsname), cluster_id)
+      mx1 = mx[, -c(1, remove_cluster_id), drop = FALSE]
       mxid = mx[, cluster_id]
       
       coef_name = colnames(mx1)
       nord = order(mxid)
       mxid = mxid[nord]
-      p = ncol(mx1)
       N = length(mxid)
+      p = ncol(mx1)
       newid = rep(0, N)
       
       if (N <= 2) {
@@ -164,7 +187,7 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
       }
       
       y = m[[1]][nord, 1]
-      X = mx1[nord, ]
+      X = mx1[nord, , drop = FALSE]
       d = m[[1]][nord, 2]
       a = max(newid) + 1
       
@@ -174,11 +197,11 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     if (length(event_id) == 1) {
       
       type = "Multiple"
-      pb = unlist(gregexpr('\\(', names(m)[event_id])) + 1
-      pe = unlist(gregexpr('\\)', names(m)[event_id])) - 1
-      evsname = substr(names(m)[event_id], pb, pe)
-      remove_event_id <- grep(evsname, names(m))
-      mx1 = mx[, -c(1, remove_event_id)]
+      pb = unlist(gregexpr('\\(', colnames(mx)[event_id])) + 1
+      pe = unlist(gregexpr('\\)', colnames(mx)[event_id])) - 1
+      evsname = substr(colnames(mx)[event_id], pb, pe)
+      remove_event_id = c(which(colnames(mx) == evsname), event_id)
+      mx1 = mx[, -c(1, remove_event_id), drop = FALSE]
       mxid = mx[, event_id]
       
       coef_name = colnames(mx1)
@@ -193,7 +216,7 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
       nord = order(mxid)
       N = length(nord)
       mx1 = mx1[nord, ]
-      X = mx1[nord, ]
+      X = mx1[nord, , drop = FALSE]
       y = m[[1]][nord, 1]
       d = m[[1]][nord, 2]
       
@@ -203,19 +226,19 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   if (ncol(m[[1]]) == 3) {
     
     type = "Recurrent"
-    cluster_id <- grep("cluster", names(m))
-    pb = unlist(gregexpr('\\(', names(m)[cluster_id])) + 1
-    pe = unlist(gregexpr('\\)', names(m)[cluster_id])) - 1
-    clsname = substr(names(m)[cluster_id], pb, pe)
-    remove_cluster_id <- grep(clsname, names(m))
-    mx1 = mx[, -c(1, remove_cluster_id)]
+    cluster_id <- grep("^cluster\\(", colnames(mx))
+    pb = unlist(gregexpr('\\(', colnames(mx)[cluster_id])) + 1
+    pe = unlist(gregexpr('\\)', colnames(mx)[cluster_id])) - 1
+    clsname = substr(colnames(mx)[cluster_id], pb, pe)
+    remove_cluster_id = c(which(colnames(mx) == clsname), cluster_id)
+    mx1 = mx[, -c(1, remove_cluster_id), drop = FALSE]
     mxid = mx[, cluster_id]
     
     coef_name = colnames(mx1)
     nord = order(mxid)
     mxid = mxid[nord]
-    p = ncol(mx1)
     N = length(mxid)
+    p = ncol(mx1)
     newid = rep(0, N)
     
     if (N <= 2) {
@@ -229,7 +252,7 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     }
     
     y = m[[1]][nord, 2]
-    X = mx1[nord, ]
+    X = mx1[nord, , drop = FALSE]
     d = m[[1]][nord, 3]
     a = max(newid) + 1
     
@@ -245,11 +268,12 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   
   if (type == "Cluster") {
     
-    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = threshold, type = 1)
+    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", maxit = 10, threshold = threshold, type = 1)
     
-    ini = frailtyMMcal(y, X, d, N, a, newid,
-                       coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
-                       frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 1)
+    # ini = frailtyMMcal(y, X, d, N, a, newid,
+    #                    coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
+    #                    frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 1)
+    ini = initGam
     
     coef0 = ini$coef
     est.tht0 = ini$est.tht
@@ -264,8 +288,9 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     
     for (z in seq_len(length(tuneseq))) {
       cur = frailtyMMcal(y, X, d, N, a, newid,
-                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0,
+                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0, safe.ini = list(coef = ini$coef, est.tht = ini$est.tht, lambda = ini$lambda),
                          frailty = frailty, power = power, penalty = penalty, gam.val = gam, tune = tuneseq[z], maxit = maxit, threshold = threshold, type = 1)
+      
       
       coef0 = cur$coef
       est.tht0 = cur$est.tht
@@ -275,20 +300,28 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
       coef_all[[z]] = coef0
       est.tht_all[[z]] = est.tht0
       lambda_all[[z]] = lambda0
+      
       likelihood_all[[z]] = likelihood0
       BIC_all[[z]] = -2*likelihood0 + max(1, log(log(p + 1)))*(sum(abs(coef0) > threshold) + 1)*log(N)
       
+      
       if (sum(abs(coef0)) < threshold) {
-        # cat(sum(abs(coef0)), "????\n")
+        cat(sum(abs(coef0)), "????\n")
         break
       }
       
-      # cat(z, "---------\n")
+      if (p > N) {
+        coef0 = ini$coef
+        est.tht0 = ini$est.tht
+        lambda0 = ini$lambda
+      } 
+      
+      cat(z, "---------\n")
     }
     
     
     coef_all = data.frame(matrix(unlist(coef_all), nrow = length(coef0)))
-    est.tht_all = unlist(coef_all)
+    est.tht_all = unlist(est.tht_all)
     likelihood_all = unlist(likelihood_all)
     BIC_all = unlist(BIC_all)
     
@@ -314,11 +347,13 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   
   if (type == "Multiple") {
     
-    initGam = frailtyMMcal(y, X, d, N, b, NULL, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 2)
+    initGam = frailtyMMcal(y, X, d, N, b, NULL, frailty = "Gamma", power = NULL, penalty = NULL, maxit = 10, threshold = tol, type = 2)
     
-    ini =  frailtyMMcal(y, X, d, N, b, NULL,
-                        coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
-                        frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 2)
+    # ini =  frailtyMMcal(y, X, d, N, b, NULL,
+    #                     coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
+    #                     frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 2)
+    
+    ini = initGam
     
     coef0 = ini$coef
     est.tht0 = ini$est.tht
@@ -333,7 +368,7 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     
     for (z in seq_len(length(tuneseq))) {
       cur = frailtyMMcal(y, X, d, N, b, NULL,
-                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0,
+                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0, safe.ini = list(coef = ini$coef, est.tht = ini$est.tht, lambda = ini$lambda),
                          frailty = frailty, power = power, penalty = penalty, gam.val = gam, tune = tuneseq[z], maxit = maxit, threshold = tol, type = 2)
       
       coef0 = cur$coef
@@ -347,17 +382,23 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
       likelihood_all[[z]] = likelihood0
       BIC_all[[z]] = -2*likelihood0 + max(1, log(log(p + 1)))*(sum(abs(coef0) > 1e-6) + 1)*log(b)
       
+      if (p > N) {
+        coef0 = ini$coef
+        est.tht0 = ini$est.tht
+        lambda0 = ini$lambda
+      } 
+      
       if (sum(abs(coef0)) < 1e-6) {
-        # cat(sum(abs(coef0)), "????\n")
+        cat(sum(abs(coef0)), "????\n")
         break
       }
       
-      # cat(z, "---------\n")
+      cat(z, "---------\n")
     }
     
     
     coef_all = data.frame(matrix(unlist(coef_all), nrow = length(coef0)))
-    est.tht_all = unlist(coef_all)
+    est.tht_all = unlist(est.tht_all)
     likelihood_all = unlist(likelihood_all)
     BIC_all = unlist(BIC_all)
     
@@ -384,11 +425,12 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   if (type == "Recurrent") {
     
     
-    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = threshold, type = 3)
+    initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = 10, threshold = threshold, type = 3)
     
-    ini = frailtyMMcal(y, X, d, N, a, newid,
-                       coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
-                       frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 3)
+    # ini = frailtyMMcal(y, X, d, N, a, newid,
+    #                    coef.ini = initGam$coef, est.tht.ini = initGam$est.tht, lambda.ini = initGam$lambda,
+    #                    frailty = frailty, power = power, penalty = NULL, maxit = maxit, threshold = tol, type = 3)
+    ini = initGam
     
     coef0 = ini$coef
     est.tht0 = ini$est.tht
@@ -403,7 +445,7 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
     
     for (z in seq_len(length(tuneseq))) {
       cur = frailtyMMcal(y, X, d, N, a, newid,
-                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0,
+                         coef.ini = coef0, est.tht.ini = est.tht0, lambda.ini = lambda0, safe.ini = list(coef = ini$coef, est.tht = ini$est.tht, lambda = ini$lambda),
                          frailty = frailty, power = power, penalty = penalty, gam.val = gam, tune = tuneseq[z], maxit = maxit, threshold = threshold, type = 3)
       
       coef0 = cur$coef
@@ -417,17 +459,23 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
       likelihood_all[[z]] = likelihood0
       BIC_all[[z]] = -2*likelihood0 + max(1, log(log(p + 1)))*(sum(abs(coef0) > 1e-6) + 1)*log(a)
       
+      if (p > N) {
+        coef0 = ini$coef
+        est.tht0 = ini$est.tht
+        lambda0 = ini$lambda
+      } 
+      
       if (sum(abs(coef0)) < 1e-6) {
-        # cat(sum(abs(coef0)), "????\n")
+        cat(sum(abs(coef0)), "????\n")
         break
       }
       
-      # cat(z, "---------\n")
+      cat(z, "---------\n")
     }
     
     
     coef_all = data.frame(matrix(unlist(coef_all), nrow = length(coef0)))
-    est.tht_all = unlist(coef_all)
+    est.tht_all = unlist(est.tht_all)
     likelihood_all = unlist(likelihood_all)
     BIC_all = unlist(BIC_all)
     
@@ -452,7 +500,6 @@ frailtyMMpen <- function(formula, data, frailty = "LogN", power = NULL, penalty 
   } 
   
  
-  
   attr(output, "call") <-  Call
   class(output) = "fpen"
   output
