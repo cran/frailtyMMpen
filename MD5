@@ -1,6 +1,6 @@
-70debf1d5a786f6d3288d44979810c6d *DESCRIPTION
+aa8729b813c2119fbf51fc7e6b46d650 *DESCRIPTION
 b6e3f4a8f2b552b5053ff25a5e3ceaf6 *NAMESPACE
-d32ab2f7602b2220bb8a6da187f94ee4 *NEWS.md
+d7e1afdf7fb259e3c3c01604665eebf7 *NEWS.md
 7511e1c7038a1ec06da918cf3992a42a *R/RcppExports.R
 29239cb52bf6039d298b3c4fc8a214ff *R/backtrackerror.R
 db815632deed67868aafc4f6f912bd34 *R/coef.R
@@ -53,7 +53,7 @@ adba91d748380885e30f56e1ef82c8ea *man/simdataCL.Rd
 cad16349d32cedd227d9341e47176fd5 *man/simdataRE.Rd
 031406e2e5ccff888e624d4421ac97c1 *man/summary.fmm.Rd
 9f83aa8caaef1d1991183e8bbd7732a2 *src/MMroutine.cpp
-7b65faf07bf075f7acbe1bde8a14c995 *src/Makevars
+e18c13db9a958abac429557facb28f2a *src/Makevars
 7b65faf07bf075f7acbe1bde8a14c995 *src/Makevars.win
 2a8777d19bb5114dd370c8cf0a298d29 *src/RcppExports.cpp
 be00deec9192572e5f9f4f46c0071d67 *src/intdist.h

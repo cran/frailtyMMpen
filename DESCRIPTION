@@ -1,7 +1,7 @@
 Package: frailtyMMpen
 Type: Package
 Title: Efficient Algorithm for High-Dimensional Frailty Model
-Version: 1.1.1
+Version: 1.1.2
 Authors@R: c(person(given = "Xifen",
                     family = "Huang",
                     role = c("aut")),
@@ -24,9 +24,9 @@ Imports: Rcpp (>= 1.0.8), graphics, stats
 LinkingTo: Rcpp, RcppGSL
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2023-07-06 14:17:24 UTC; micha
+Packaged: 2023-07-06 17:06:40 UTC; micha
 Author: Xifen Huang [aut],
   Yunpeng Zhou [aut, cre],
   Jinfeng Xu [ctb]
 Repository: CRAN
-Date/Publication: 2023-07-06 14:40:02 UTC
+Date/Publication: 2023-07-07 07:40:08 UTC

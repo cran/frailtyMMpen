@@ -1,2 +1,2 @@
 PKG_CPPFLAGS = -I$(LIB_GSL)/include
-PKG_LIBS = -L$(LIB_GSL)/lib${R_ARCH}${CRT} -lgsl -lgslcblas 
+PKG_LIBS = `$(R_HOME)/bin/Rscript -e "RcppGSL:::LdFlags()"`
