@@ -1,8 +1,8 @@
 #' Simulated High-dimensional Clustered data
 #'
-#' This data include 40 clusters with 2 objects, a total of 80 events are recorded.
-#' 200 covariates can be used for model fitting. The data is generated from a
-#' gamma frailty model with coefficients (4,4,4,4,4,...,0) and frailty variance 1.
+#' This data include 50 clusters with 4 objects, a total of 200 events are recorded.
+#' 500 covariates can be used for model fitting. The data is generated from a
+#' gamma frailty model with coefficients (5,5,5,5,...,0) and frailty variance 1.
 #'
 #' @docType data
 #' @usage data(hdCLdata)

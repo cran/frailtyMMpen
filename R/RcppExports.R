@@ -13,6 +13,10 @@ MMRE <- function(y, X, d, coef0, lambda0, tht0, frailty, penalty, gam, tune, id,
     .Call(`_frailtyMMpen_MMRE`, y, X, d, coef0, lambda0, tht0, frailty, penalty, gam, tune, id, N, a, p, power)
 }
 
+MMRELS <- function(y, X, d, coef0, lambda0, tht0, frailty, penalty, gam, tune, id, N, a, p, power) {
+    .Call(`_frailtyMMpen_MMRELS`, y, X, d, coef0, lambda0, tht0, frailty, penalty, gam, tune, id, N, a, p, power)
+}
+
 LogLikCL <- function(y, X, d, coef0, lambda0, tht0, frailty, id, N, a, p, power) {
     .Call(`_frailtyMMpen_LogLikCL`, y, X, d, coef0, lambda0, tht0, frailty, id, N, a, p, power)
 }

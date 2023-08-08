@@ -87,6 +87,7 @@
 #' @param maxit Maximum iterations for MM algorithm.
 #' @param ... additional arguments pass to the function.
 #' @import mgcv survival
+#' @importFrom utils packageVersion
 #' @importFrom graphics abline lines matplot
 #' @importFrom stats model.frame model.matrix pnorm predict printCoefmat
 #' @export
@@ -243,6 +244,14 @@ frailtyMM <- function(formula, data, frailty = "gamma", power = NULL, tol = 1e-5
       d = m[[1]][, 2]
       a = N
       
+      neworder = order(y, decreasing = TRUE)
+      newrank = seq(1, N, 1)[order(neworder)]
+      
+      y = y[neworder]
+      X = X[neworder, ]
+      d = d[neworder]
+      newid = newid[neworder]
+      
       initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1, SQS1 = 0)
       
       output = frailtyMMcal(y, X, d, N, a, newid,
@@ -299,6 +308,14 @@ frailtyMM <- function(formula, data, frailty = "gamma", power = NULL, tol = 1e-5
       d = m[[1]][nord, 2]
       p = ncol(mx1)
       a = max(newid) + 1
+      
+      neworder = order(y, decreasing = TRUE)
+      newrank = seq(1, N, 1)[order(neworder)]
+      
+      y = y[neworder]
+      X = X[neworder, ]
+      d = d[neworder]
+      newid = newid[neworder]
       
       initGam = frailtyMMcal(y, X, d, N, a, newid, frailty = "Gamma", power = NULL, penalty = NULL, maxit = maxit, threshold = tol, type = 1, SQS1 = 0)
       

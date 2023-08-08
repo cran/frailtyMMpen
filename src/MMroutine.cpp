@@ -97,7 +97,12 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
   int tempID(0);
   double D1(0.0), D2(0.0);
   
-  computeLAM(La, lambda, y, N, 0);
+  // computeLAM(La, lambda, y, N, 0);
+  
+  La[N - 1] = lambda[N - 1];
+  for (int i = N - 2; i >= 0; i--) {
+    La[i] = La[i + 1] + lambda[i];
+  }
   
   for (int i = 0; i < p; i++) {
     YpreExp += X[Range(i*N, (i+1)*N-1)] * coef[i];
@@ -154,7 +159,7 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
       if (status) {
         
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
         
       }
       
@@ -164,7 +169,7 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
       
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
       
@@ -219,7 +224,7 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
       
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
       
@@ -280,7 +285,12 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
   }
   
   E0 = ME * YpreExp;
-  computeLAM(SUM0, E0, y, N, 1);
+  // computeLAM(SUM0, E0, y, N, 1);
+  
+  SUM0[0] = E0[0];
+  for (int i = 1; i < N; i++) {
+    SUM0[i] = SUM0[i - 1] + E0[i];
+  }
   lambda = d / SUM0;
   
   // Update coefficients
@@ -294,8 +304,15 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
     E1 = ME * X[Range(i*N, (i+1)*N-1)] * YpreExp;
     E2 = ME * AVEX *X[Range(i*N, (i+1)*N-1)] * YpreExp;
     
-    computeLAM(SUM1, E1, y, N, 1);
-    computeLAM(SUM2, E2, y, N, 1);
+    // computeLAM(SUM1, E1, y, N, 1);
+    // computeLAM(SUM2, E2, y, N, 1);
+    // 
+    SUM1[0] = E1[0];
+    SUM2[0] = E2[0];
+    for (int i = 1; i < N; i++) {
+      SUM1[i] = SUM1[i - 1] + E1[i];
+      SUM2[i] = SUM2[i - 1] + E2[i];
+    }
     
     D11 = d * X[Range(i*N, (i+1)*N-1)] - d * SUM1 / SUM0;
     D22 = - d * SUM2 / SUM0;
@@ -324,6 +341,11 @@ List MMCL(const NumericVector& y, NumericVector X, const NumericVector& d, const
     coef[i] -= D1/D2;
     
   }
+  
+  if (max(abs(coef)) > 1000 || tht > 1000 || max(abs(lambda)) > 1000) {
+    return(List::create(_["error"] = 1));
+  }
+  
   
   List ret = List::create(_["coef"] = coef, _["est.tht"] = tht, _["lambda"] = lambda, _["error"] = 0, _["Ar"] = int2);
   return ret;
@@ -423,7 +445,7 @@ List MMME(const NumericVector& y, NumericVector X, const NumericVector& d, const
       if (status) {
 
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
 
       }
 
@@ -433,7 +455,7 @@ List MMME(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
 
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
 
@@ -488,7 +510,7 @@ List MMME(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
 
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
 
@@ -605,6 +627,10 @@ List MMME(const NumericVector& y, NumericVector X, const NumericVector& d, const
 
     coef[i] -= D1/D2;
 
+  }
+  
+  if (max(abs(coef)) > 1000 || tht > 1000 || max(abs(lambda)) > 1000) {
+    return(List::create(_["error"] = 1));
   }
   
   List ret = List::create(_["coef"] = coef, _["est.tht"] = tht, _["lambda"] = lambda, _["error"] = 0, _["Ar"] = int2);
@@ -746,7 +772,7 @@ List MMRE(const NumericVector& y, NumericVector X, const NumericVector& d, const
       if (status) {
         
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
         
       }
       
@@ -756,7 +782,7 @@ List MMRE(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
       
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
       
@@ -811,7 +837,7 @@ List MMRE(const NumericVector& y, NumericVector X, const NumericVector& d, const
       status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
       
       if (status) {
-        Rcout << "F2: 0\n";
+        // Rcout << "F2: 0\n";
         return(List::create(_["error"] = 1));
       }
       
@@ -933,6 +959,334 @@ List MMRE(const NumericVector& y, NumericVector X, const NumericVector& d, const
 
 
 // [[Rcpp::export]]
+List MMRELS(const NumericVector& y, NumericVector X, const NumericVector& d, const NumericVector& coef0, const NumericVector& lambda0,
+          const double& tht0, int frailty, int penalty, double gam, double tune, const NumericVector& id, int N, int a, int p, double power) {
+  
+  NumericVector coef = clone(coef0);
+  NumericVector lambda = clone(lambda0);
+  double tht = tht0;
+  
+  NumericVector La(N);
+
+  NumericVector YpreExp(N, 0.0);
+  NumericVector Yend(a, 0.0);
+  intParams kint;
+  
+  NumericVector A(a, 0.0);
+  NumericVector B(a, 1.0);
+  NumericVector D(a, 0.0);
+  
+  NumericVector AT(a, 0.0);
+  NumericVector DT(a, 0.0);
+  
+  NumericVector int1(a, 0.0);
+  NumericVector int2(a, 0.0);
+  NumericVector int3(a, 0.0);
+  
+  NumericVector SUM00(N, 0.0);
+  NumericVector AVEXX(N, 0.0);
+  
+  NumericVector SUM11(N*p, 0.0);
+  NumericVector SUM22(N*p, 0.0);
+  
+  
+  int tempID(0), tempPOS(0), pretempPOS(0);
+  double D1(0.0), D2(0.0);
+  
+  for (int i = 0; i < N; i++) {
+    tempID = id[i];
+    if (i == N-1 || tempID < id[i+1]) {
+      Yend[tempID] = y[i];
+    }
+  }
+  
+  computeLAM(La, lambda, y, N, 0);
+  
+  for (int i = 0; i < p; i++) {
+    YpreExp += X[Range(i*N, (i+1)*N-1)] * coef[i];
+  }
+  
+  YpreExp = exp(YpreExp);
+  
+  double L0 = 0;
+  for (int i = 0; i < N; i++) {
+    tempID = id[i];
+    if (i == 0 || tempID > id[i-1]) {
+      L0 = 0;
+    }
+    A[tempID] += (La[i] - L0) * YpreExp[i];
+    L0 = La[i];
+  }
+  
+  for (int j = 0; j < N; j++) {
+    tempID = id[j];
+    if (d[j] == 1) {
+      B[tempID] *= lambda[j] * YpreExp[j];
+      D[tempID]++;
+    }
+  }
+  
+  if (frailty == 1 || frailty == 2) {
+    
+    gsl_set_error_handler_off();
+    int status;
+    
+    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+    gsl_function F1, F2, F3;
+    double result(0.0), error;
+    
+    if (frailty == 1) {
+      F1.function = &logN1int;
+      F2.function = &logN2int;
+      F3.function = &logN3int;
+    }
+    
+    if (frailty == 2) {
+      F1.function = &InvG1int;
+      F2.function = &InvG2int;
+      F3.function = &InvG3int;
+    }
+    
+    F1.params = &kint;
+    F2.params = &kint;
+    F3.params = &kint;
+    kint.s = tht;
+    
+    for (int i = 0; i < a; i++) {
+      
+      kint.a = A[i];
+      kint.b = B[i];
+      kint.d = D[i];
+      
+      status = gsl_integration_qagiu (&F1, 0, 0, 1e-7, 1000, w, &result, &error);
+      
+      if (status) {
+        
+        status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
+        // Rcout << "F1: Approximated by Interval\n";
+        
+      }
+      
+      kint.por = result;
+      int1[i] = result;
+      
+      status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
+      
+      if (status) {
+        // Rcout << "F2: 0\n";
+        return(List::create(_["error"] = 1));
+      }
+      
+      int2[i] = result;
+      
+      status = gsl_integration_qagiu (&F3, 0, 0, 1e-7, 1000, w, &result, &error);
+      int3[i] = result;
+      
+    }
+    
+    tht = std::accumulate(int3.begin(), int3.end(), 0.0) / a;
+    
+    gsl_integration_workspace_free (w);
+    
+  }
+  
+  if (frailty == 3) {
+    
+    NumericVector int4(a, 0.0);
+    
+    gsl_set_error_handler_off();
+    
+    int status;
+    
+    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+    gsl_function F1, F2, F3, F4;
+    double result(0.0), error;
+    
+    F1.function = &PVF1int;
+    F2.function = &PVF2int;
+    F3.function = &PVF3int;
+    F4.function = &PVF4int;
+    
+    F1.params = &kint;
+    F2.params = &kint;
+    F3.params = &kint;
+    F4.params = &kint;
+    kint.s = tht;
+    kint.mpvf = power;
+    
+    for (int i = 0; i < a; i++) {
+      
+      kint.a = A[i];
+      kint.b = B[i];
+      kint.d = D[i];
+      
+      status = gsl_integration_qagiu (&F1, 0, 0, 1e-7, 1000, w, &result, &error);
+      
+      kint.por = result;
+      int1[i] = result;
+      
+      status = gsl_integration_qagiu (&F2, 0, 0, 1e-7, 1000, w, &result, &error);
+      
+      if (status) {
+        // Rcout << "F2: 0\n";
+        return(List::create(_["error"] = 1));
+      }
+      
+      int2[i] = result;
+      
+      status = gsl_integration_qagiu (&F3, 0, 0, 1e-7, 1000, w, &result, &error);
+      int3[i] = result;
+      
+      status = gsl_integration_qagiu (&F4, 0, 0, 1e-7, 1000, w, &result, &error);
+      int4[i] = result;
+      
+    }
+    
+    double thtPVF = tht - std::accumulate(int3.begin(), int3.end(), 0.0) / std::accumulate(int4.begin(), int4.end(), 0.0);
+    
+    gsl_integration_workspace_free (w);
+    
+    if (thtPVF > 0) {
+      tht = thtPVF;
+    }
+    
+  }
+  
+  if (frailty == 0) {
+    
+    AT = 1/tht + A;
+    DT = 1/tht + D;
+    int2 = DT/AT;
+    
+    double tht1(0.0), Q1(0.0), Q21(0.0), Q22(0.0);
+    
+    Q1 += a*(gsl_sf_psi(1/tht) + std::log(tht) - 1);
+    for (int i = 0; i < a; i++) {
+      Q1 += int2[i] + std::log(AT[i]) - gsl_sf_psi(DT[i]);
+    }
+    Q1 /= std::pow(tht, 2);
+    
+    Q21 += a*(3 - 2*gsl_sf_psi(1/tht) - 2*std::log(tht));
+    for (int i = 0; i < a; i++) {
+      Q21 += 2*(gsl_sf_psi(DT[i]) - int2[i] - std::log(AT[i]));
+    }
+    Q21 /= std::pow(tht, 3);
+    
+    Q22 = - a*gsl_sf_psi_1(1/tht) / std::pow(tht, 4);
+    
+    tht1 = tht - Q1 / (Q21 + Q22);
+    if(tht1 > 0) {
+      tht = tht1 ;
+    }
+    
+  }
+  
+  for (int i = 0; i < p; i++) {
+    AVEXX += abs(X[Range(i*N, (i+1)*N-1)]);
+  } 
+  
+  std::vector<Reorder> LaR(N);
+  std::unordered_map<int, int> hashtable;
+  double RS = 0.0;
+  NumericVector RS1(p, 0.0), RS2(p, 0.0);
+  
+  for (int i = 0; i < N; i++) {
+    LaR[i].a = id[i];
+    LaR[i].b = y[i];
+    LaR[i].id = i;
+  }
+  
+  std::sort(LaR.begin(), LaR.end(), [](const Reorder& z1, const Reorder& z2){return(z1.b > z2.b);});
+  
+  for (int i = 0; i < N; i++) {
+
+    tempID = LaR[i].a;
+    tempPOS = LaR[i].id;
+    if (hashtable[tempID] == 0) {
+
+      RS += int2[tempID] * YpreExp[tempPOS];
+      
+      for (int z = 0; z < p; z++) {
+        RS1[z] += int2[tempID] * X[tempPOS + z*N] * YpreExp[tempPOS];
+        RS2[z] += int2[tempID] * abs(X[tempPOS + z*N]) * YpreExp[tempPOS] * AVEXX[tempPOS];
+      }
+
+      hashtable[tempID] = tempPOS + 1;
+      SUM00[tempPOS] = RS;
+      SUM11[Range(tempPOS*p, (tempPOS+1)*p-1)] = RS1;
+      SUM22[Range(tempPOS*p, (tempPOS+1)*p-1)] = RS2;
+
+    } else {
+
+      pretempPOS = hashtable[tempID] - 1;
+
+      RS -= int2[tempID] * YpreExp[pretempPOS];
+      RS += int2[tempID] * YpreExp[tempPOS];
+
+      for (int z = 0; z < p; z++) {
+        RS1[z] -= int2[tempID] * X[pretempPOS + z*N] * YpreExp[pretempPOS];
+        RS2[z] -= int2[tempID] * abs(X[pretempPOS + z*N]) * YpreExp[pretempPOS] * AVEXX[pretempPOS];
+        
+        RS1[z] += int2[tempID] * X[tempPOS + z*N] * YpreExp[tempPOS];
+        RS2[z] += int2[tempID] * abs(X[tempPOS + z*N]) * YpreExp[tempPOS] * AVEXX[tempPOS];
+      }
+
+      hashtable[tempID] = tempPOS + 1;
+      SUM00[tempPOS] = RS;
+      SUM11[Range(tempPOS*p, (tempPOS+1)*p-1)] = RS1;
+      SUM22[Range(tempPOS*p, (tempPOS+1)*p-1)] = RS2;
+
+    }
+  }
+  
+  // Update lambda Variables
+  
+  lambda = d / SUM00;
+  
+  // Update coefficients
+  
+  for (int i = 0; i < p; i++) {
+    
+    D1 = 0;
+    D2 = 0;
+    for (int z = 0; z < N; z++) {
+      D1 += d[z] * X[i*N + z] - d[z] * SUM11[z*p + i] / SUM00[z];
+      D2 -= d[z] * SUM22[z*p + i] / SUM00[z];
+    }
+    
+    if (penalty != 0) {
+      
+      if (penalty == 1) {
+        D1 -= N*sgn(coef[i])*tune;
+        D2 -= N*tune/std::abs(coef[i]);
+      }
+      
+      if (penalty == 2) {
+        D1 -= N*sgn(coef[i])*(tune - std::abs(coef[i])/gam)*(std::abs(coef[i]) <= gam*tune);
+        D2 -= N*(tune - std::abs(coef[i])/gam)*(std::abs(coef[i]) <= gam*tune)/std::abs(coef[i]);
+      }
+      
+      if (penalty == 3) {
+        D1 -= N*sgn(coef[i])*(tune*(std::abs(coef[i]) <= tune) + std::max(0.0, gam*tune - std::abs(coef[i]))*(std::abs(coef[i]) > tune)/(gam - 1));
+        D2 -= N*(tune*(std::abs(coef[i]) <= tune) + std::max(0.0, gam*tune - std::abs(coef[i]))*(std::abs(coef[i]) > tune)/(gam - 1))/std::abs(coef[i]);
+      }
+    }
+    
+    coef[i] -= D1/D2;
+    
+  }
+  
+  if (max(abs(coef)) > 1000 || tht > 1000 || max(abs(lambda)) > 1000) {
+    return(List::create(_["error"] = 1));
+  }
+  
+  List Ar = List::create(_["SUM00"] = SUM00, _["SUM11"] = SUM11, _["SUM22"] = SUM22);
+  List ret = List::create(_["coef"] = coef, _["est.tht"] = tht, _["lambda"] = lambda, _["error"] = 0, _["Ar"] = int2);
+  return ret;
+}
+
+
+// [[Rcpp::export]]
 double LogLikCL(const NumericVector& y, NumericVector X, const NumericVector& d, const NumericVector& coef0, const NumericVector& lambda0,
                 const double& tht0, int frailty, const NumericVector& id, int N, int a, int p, double power) {
   
@@ -1016,7 +1370,7 @@ double LogLikCL(const NumericVector& y, NumericVector X, const NumericVector& d,
       if (status) {
         
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
         
       }
       
@@ -1140,7 +1494,7 @@ double LogLikME(const NumericVector& y, NumericVector X, const NumericVector& d,
       if (status) {
         
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
         
       }
       
@@ -1265,7 +1619,7 @@ double LogLikRE(const NumericVector& y, NumericVector X, const NumericVector& d,
       if (status) {
         
         status = gsl_integration_qags (&F1, 0.001, 10, 0, 1e-7, 1000, w, &result, &error);
-        Rcout << "F1: Approximated by Interval\n";
+        // Rcout << "F1: Approximated by Interval\n";
         
       }
       

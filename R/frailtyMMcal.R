@@ -192,6 +192,14 @@ frailtyMMcal <- function(y, X, d, N, a, id, coef.ini = NULL, est.tht.ini = NULL,
  
     error = sum(abs(coef - coef0)) + sum(abs(est.tht - est.tht0))
     
+    if (error > 1e+5 && SQS1 == 0) {
+      coef = coef.ini
+      est.tht = est.tht.ini
+      lambda = lambda.ini
+      num = 0
+      error_count = error_count + 2
+    }
+    
     if (error_count > 2) {
       break
     }
